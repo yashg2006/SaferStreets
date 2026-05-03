@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=sqlite:///./safe_city.db
+    # To add PostgreSQL/PostGIS later, we would add another service here
+    # and link it to the backend. For now, we mock the logic to speed up prototyping.

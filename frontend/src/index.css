@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-gray-800 font-sans antialiased;
+    /* Soft gradient background to look premium */
+    background: linear-gradient(135deg, #F8F9FE 0%, #E0E7FF 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-surface backdrop-blur-xl border border-white/40 shadow-glass rounded-2xl;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-primary-light text-white font-medium py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5;
+  }
+  
+  .btn-outline {
+    @apply bg-white/50 backdrop-blur-md border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-xl shadow-sm hover:bg-white/80 transition-all duration-300;
+  }
+}
+
+/* Mapbox specific overrides to make it look cleaner */
+.mapboxgl-ctrl-bottom-right {
+  display: none !important; /* Hide logo/watermark for prototype aesthetic, ensure compliance if moving to prod */
+}
