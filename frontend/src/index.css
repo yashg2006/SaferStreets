@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,28 +6,58 @@
 
 @layer base {
   body {
-    @apply bg-background text-gray-800 font-sans antialiased;
-    /* Soft gradient background to look premium */
-    background: linear-gradient(135deg, #F8F9FE 0%, #E0E7FF 100%);
-    min-height: 100vh;
+    @apply bg-background text-gray-800 font-sans antialiased overflow-hidden;
+    /* Soft mesh gradient background to look ultra-premium */
+    background-color: #f3f4f6;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+      radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+      radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+    background-size: cover;
+    background-attachment: fixed;
+    /* Use dark theme text by default on this dark premium background */
+    color: #f8fafc;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-surface backdrop-blur-xl border border-white/40 shadow-glass rounded-2xl;
+    @apply bg-black/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl transition-all duration-300;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-glass rounded-2xl hover:bg-white/10 transition-colors duration-300;
+  }
+
   .btn-primary {
-    @apply bg-gradient-to-r from-primary to-primary-light text-white font-medium py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5;
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 active:scale-95;
   }
   
   .btn-outline {
-    @apply bg-white/50 backdrop-blur-md border border-gray-200 text-gray-700 font-medium py-2 px-4 rounded-xl shadow-sm hover:bg-white/80 transition-all duration-300;
+    @apply bg-white/5 backdrop-blur-md border border-white/20 text-white font-semibold py-3 px-6 rounded-2xl shadow-sm hover:bg-white/10 transition-all duration-300 active:scale-95;
   }
 }
 
 /* Mapbox specific overrides to make it look cleaner */
-.mapboxgl-ctrl-bottom-right {
-  display: none !important; /* Hide logo/watermark for prototype aesthetic, ensure compliance if moving to prod */
+.mapboxgl-ctrl-bottom-right, .mapboxgl-ctrl-bottom-left {
+  display: none !important; /* Hide logo/watermark for prototype aesthetic */
+}
+
+/* Custom scrollbar for webkit */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-white/20 rounded-full;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/40;
 }

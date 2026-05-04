@@ -1,20 +1,23 @@
 import React from 'react';
-import { Search, ShieldAlert, Navigation, Activity, Clock, Users } from 'lucide-react';
+import { Search, ShieldAlert, Navigation, Activity, Clock, Users, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar = ({ safeMode, setSafeMode }) => {
   return (
-    <div className="glass-panel h-full flex flex-col p-5 bg-white/60">
+    <div className="glass-panel h-full flex flex-col p-6 w-96 relative overflow-hidden">
+      
+      {/* Decorative Glow */}
+      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
       
       {/* Title & Search */}
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Route Optimization</h2>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <div className="mb-8 relative z-10">
+        <h2 className="text-2xl font-bold text-white mb-5 font-outfit tracking-wide">Optimization</h2>
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 group-focus-within:text-indigo-400 transition-colors" />
           <input 
             type="text" 
             placeholder="Search destination..." 
-            className="w-full bg-white/80 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white/10 transition-all text-sm shadow-inner"
           />
         </div>
       </div>
@@ -22,38 +25,43 @@ const Sidebar = ({ safeMode, setSafeMode }) => {
       {/* Safety Score Card */}
       <motion.div 
         layout
-        className={`rounded-2xl p-4 mb-6 text-white transition-colors duration-500 shadow-md ${safeMode ? 'bg-gradient-to-br from-success to-emerald-600' : 'bg-gradient-to-br from-gray-700 to-gray-900'}`}
+        className={`relative overflow-hidden rounded-3xl p-5 mb-8 text-white transition-all duration-500 shadow-xl border border-white/10 ${safeMode ? 'bg-gradient-to-br from-emerald-500 to-teal-700 shadow-emerald-500/20' : 'bg-gradient-to-br from-[#2a2d3e] to-[#1f212e]'}`}
       >
-        <div className="flex justify-between items-start mb-4">
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+        
+        <div className="flex justify-between items-start mb-5 relative z-10">
           <div>
-            <p className="text-white/80 text-xs font-medium uppercase tracking-wider mb-1">Route Status</p>
-            <h3 className="text-2xl font-bold">{safeMode ? 'High Safety' : 'Standard'}</h3>
+            <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-1.5">Route Status</p>
+            <h3 className="text-3xl font-bold font-outfit tracking-tight">{safeMode ? 'Maximum Safety' : 'Standard Fast'}</h3>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-            <ShieldAlert className="w-5 h-5 text-white" />
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md shadow-inner ${safeMode ? 'bg-white/20 border border-white/30' : 'bg-white/5 border border-white/10'}`}>
+            <ShieldAlert className={`w-6 h-6 ${safeMode ? 'text-white' : 'text-indigo-400'}`} />
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="bg-black/10 rounded-lg p-2 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-white/70" />
-            <span>{safeMode ? '24 mins' : '18 mins'}</span>
+        <div className="grid grid-cols-2 gap-3 text-sm relative z-10">
+          <div className="bg-black/20 rounded-xl p-3 flex items-center gap-3 backdrop-blur-sm border border-white/5">
+            <Clock className={`w-4 h-4 ${safeMode ? 'text-emerald-200' : 'text-indigo-300'}`} />
+            <span className="font-medium">{safeMode ? '24 mins' : '18 mins'}</span>
           </div>
-          <div className="bg-black/10 rounded-lg p-2 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-white/70" />
-            <span>{safeMode ? 'Risk: Low' : 'Risk: Med'}</span>
+          <div className="bg-black/20 rounded-xl p-3 flex items-center gap-3 backdrop-blur-sm border border-white/5">
+            <Activity className={`w-4 h-4 ${safeMode ? 'text-emerald-200' : 'text-indigo-300'}`} />
+            <span className="font-medium">{safeMode ? 'Risk: Low' : 'Risk: Med'}</span>
           </div>
         </div>
       </motion.div>
 
       {/* Factors List */}
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Live Factors</h3>
+      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">Live Factors</h3>
+          <span className="text-[10px] font-bold bg-white/10 text-white/70 px-2 py-1 rounded-md">LIVE</span>
+        </div>
         
         <div className="flex flex-col gap-3">
           
           <FactorCard 
-            icon={<Activity className="w-4 h-4 text-danger" />} 
+            icon={<Activity className="w-4 h-4 text-rose-400" />} 
             title="Crime Reports"
             desc="2 incidents reported recently"
             status="danger"
@@ -61,7 +69,7 @@ const Sidebar = ({ safeMode, setSafeMode }) => {
           />
           
           <FactorCard 
-            icon={<Users className="w-4 h-4 text-primary" />} 
+            icon={<Users className="w-4 h-4 text-indigo-400" />} 
             title="Crowd Density"
             desc="Moderate crowd presence"
             status="info"
@@ -69,8 +77,8 @@ const Sidebar = ({ safeMode, setSafeMode }) => {
           />
           
           <FactorCard 
-            icon={<ShieldAlert className="w-4 h-4 text-success" />} 
-            title="Emergency Infrastructure"
+            icon={<ShieldAlert className="w-4 h-4 text-emerald-400" />} 
+            title="Emergency Access"
             desc="Passing 2 Police Stations"
             status="success"
             active={safeMode}
@@ -80,10 +88,10 @@ const Sidebar = ({ safeMode, setSafeMode }) => {
       </div>
 
       {/* Emergency Button */}
-      <div className="mt-4 pt-4 border-t border-gray-200/50">
-        <button className="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-xl border border-red-100 hover:bg-red-100 hover:border-red-200 transition-colors flex items-center justify-center gap-2">
-          <ShieldAlert className="w-5 h-5" />
-          Emergency / SOS
+      <div className="mt-6 pt-6 border-t border-white/10 relative z-10">
+        <button className="w-full bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-rose-500/20 hover:shadow-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 group active:scale-95">
+          <ShieldAlert className="w-5 h-5 group-hover:animate-pulse" />
+          <span className="tracking-wide">Emergency SOS</span>
         </button>
       </div>
 
@@ -93,15 +101,18 @@ const Sidebar = ({ safeMode, setSafeMode }) => {
 
 const FactorCard = ({ icon, title, desc, status, active }) => {
   return (
-    <div className={`p-3 rounded-xl border transition-all ${active ? 'bg-white border-primary/20 shadow-sm' : 'bg-white/40 border-gray-100 opacity-60 grayscale'}`}>
-      <div className="flex items-start gap-3">
-        <div className={`mt-0.5 p-1.5 rounded-lg ${status === 'danger' ? 'bg-red-50' : status === 'success' ? 'bg-green-50' : 'bg-blue-50'}`}>
-          {icon}
+    <div className={`p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${active ? 'bg-white/10 border-white/20 shadow-lg hover:bg-white/15 hover:-translate-y-0.5' : 'bg-white/5 border-white/5 opacity-50 grayscale hover:grayscale-0 hover:opacity-100'}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={`p-2.5 rounded-xl shadow-inner ${status === 'danger' ? 'bg-rose-500/20 border border-rose-500/30' : status === 'success' ? 'bg-emerald-500/20 border border-emerald-500/30' : 'bg-indigo-500/20 border border-indigo-500/30'}`}>
+            {icon}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white tracking-wide">{title}</h4>
+            <p className="text-xs text-white/50 mt-1 font-medium">{desc}</p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
-          <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
-        </div>
+        <ChevronRight className="w-4 h-4 text-white/20" />
       </div>
     </div>
   );

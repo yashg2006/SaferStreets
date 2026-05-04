@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Note: Replace with your actual Mapbox token
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.replace_this_with_your_actual_mapbox_token_here_from_mapbox_website';
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.replace_with_your_token_in_env_file';
 
 const MapComponent = ({ safeMode }) => {
   const mapContainer = useRef(null);
@@ -12,13 +12,13 @@ const MapComponent = ({ safeMode }) => {
   useEffect(() => {
     if (map.current) return; // initialize map only once
     
-    // Using a light, aesthetic map style
+    // Using a sleek dark map style for a premium look
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/dark-v11', // Premium dark mode Mapbox style
       center: [-74.006, 40.7128], // Default to NYC
-      zoom: 13,
-      pitch: 45, // Add some pitch for a modern 3D look
+      zoom: 14.5,
+      pitch: 60, // Higher pitch for a more immersive 3D feel
       bearing: -17.6,
       antialias: true
     });
@@ -39,7 +39,7 @@ const MapComponent = ({ safeMode }) => {
           'type': 'fill-extrusion',
           'minzoom': 15,
           'paint': {
-            'fill-extrusion-color': '#aaa',
+            'fill-extrusion-color': '#1f2937', // Dark slate for buildings
             'fill-extrusion-height': [
               'interpolate',
               ['linear'],
@@ -58,7 +58,7 @@ const MapComponent = ({ safeMode }) => {
               15.05,
               ['get', 'min_height']
             ],
-            'fill-extrusion-opacity': 0.6
+            'fill-extrusion-opacity': 0.8
           }
         },
         labelLayerId
@@ -82,6 +82,23 @@ const MapComponent = ({ safeMode }) => {
         }
       });
 
+      // Route glow effect
+      map.current.addLayer({
+        'id': 'route-line-glow',
+        'type': 'line',
+        'source': 'route',
+        'layout': {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        'paint': {
+          'line-color': safeMode ? '#10B981' : '#6366f1',
+          'line-width': 14,
+          'line-opacity': 0.3,
+          'line-blur': 10
+        }
+      });
+
       map.current.addLayer({
         'id': 'route-line',
         'type': 'line',
@@ -91,9 +108,9 @@ const MapComponent = ({ safeMode }) => {
           'line-cap': 'round'
         },
         'paint': {
-          'line-color': safeMode ? '#10B981' : '#3B82F6',
+          'line-color': safeMode ? '#34d399' : '#818cf8',
           'line-width': 6,
-          'line-opacity': 0.8
+          'line-opacity': 1
         }
       });
       
@@ -121,20 +138,20 @@ const MapComponent = ({ safeMode }) => {
         source: 'risk-zones',
         paint: {
           'heatmap-weight': ['get', 'risk'],
-          'heatmap-intensity': 1,
+          'heatmap-intensity': 1.5,
           'heatmap-color': [
             'interpolate',
             ['linear'],
             ['heatmap-density'],
             0,
-            'rgba(239, 68, 68, 0)',
+            'rgba(244, 63, 94, 0)', // Rose 500
             0.5,
-            'rgba(239, 68, 68, 0.5)',
+            'rgba(244, 63, 94, 0.4)',
             1,
-            'rgba(239, 68, 68, 0.8)'
+            'rgba(244, 63, 94, 0.9)'
           ],
-          'heatmap-radius': 50,
-          'heatmap-opacity': safeMode ? 0.8 : 0.3 // Show clearly in safe mode to explain why it routes around
+          'heatmap-radius': 70,
+          'heatmap-opacity': safeMode ? 0.7 : 0.2
         }
       });
     });
@@ -148,7 +165,12 @@ const MapComponent = ({ safeMode }) => {
       map.current.setPaintProperty(
         'route-line',
         'line-color',
-        safeMode ? '#10B981' : '#3B82F6'
+        safeMode ? '#34d399' : '#818cf8'
+      );
+      map.current.setPaintProperty(
+        'route-line-glow',
+        'line-color',
+        safeMode ? '#10B981' : '#6366f1'
       );
     }
     
@@ -156,13 +178,13 @@ const MapComponent = ({ safeMode }) => {
       map.current.setPaintProperty(
         'risk-heatmap',
         'heatmap-opacity',
-        safeMode ? 0.8 : 0.3
+        safeMode ? 0.7 : 0.2
       );
     }
   }, [safeMode]);
 
   return (
-    <div className="absolute inset-0 w-full h-full">
+    <div className="absolute inset-0 w-full h-full bg-[#1f2937]">
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
