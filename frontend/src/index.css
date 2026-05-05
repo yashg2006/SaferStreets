@@ -6,19 +6,12 @@
 
 @layer base {
   body {
-    @apply bg-background text-gray-800 font-sans antialiased overflow-hidden;
-    /* Soft mesh gradient background to look ultra-premium */
-    background-color: #f3f4f6;
-    background-image: 
-      radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-      radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-      radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-    background-size: cover;
-    background-attachment: fixed;
-    /* Use dark theme text by default on this dark premium background */
+    @apply antialiased overflow-hidden;
+    font-family: 'Inter', sans-serif;
+    background-color: #0d1117;
     color: #f8fafc;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
   }
@@ -26,38 +19,130 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-black/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl transition-all duration-300;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    @apply bg-black/50 backdrop-blur-2xl border border-white/10 shadow-2xl transition-all duration-300;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
-  
+
   .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-glass rounded-2xl hover:bg-white/10 transition-colors duration-300;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg rounded-2xl hover:bg-white/8 transition-colors duration-300;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 active:scale-95;
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-6 rounded-2xl shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95;
   }
-  
+
   .btn-outline {
-    @apply bg-white/5 backdrop-blur-md border border-white/20 text-white font-semibold py-3 px-6 rounded-2xl shadow-sm hover:bg-white/10 transition-all duration-300 active:scale-95;
+    @apply bg-white/5 backdrop-blur-md border border-white/15 text-white font-semibold py-3 px-6 rounded-2xl hover:bg-white/10 transition-all duration-300 active:scale-95;
   }
 }
 
-/* Mapbox specific overrides to make it look cleaner */
-.mapboxgl-ctrl-bottom-right, .mapboxgl-ctrl-bottom-left {
-  display: none !important; /* Hide logo/watermark for prototype aesthetic */
+/* ─────────────────────────────────────────────
+   Mapbox overrides — clean minimal like Uber
+───────────────────────────────────────────── */
+
+/* Hide default Mapbox logo/attribution for prototype */
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib {
+  display: none !important;
 }
 
-/* Custom scrollbar for webkit */
+/* Keep the scale control but style it cleanly */
+.mapboxgl-ctrl-scale {
+  background: rgba(13, 17, 23, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 10px !important;
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+}
+
+/* Smooth tile transitions */
+.mapboxgl-map canvas {
+  border-radius: 0;
+}
+
+/* ─────────────────────────────────────────────
+   Origin marker — pulsing green dot
+───────────────────────────────────────────── */
+
+.origin-marker {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.origin-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #10b981;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+}
+
+.origin-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(16, 185, 129, 0.7);
+  border-radius: 50%;
+  z-index: 1;
+  animation: pulse-ring 2.2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.7); opacity: 1; }
+  70%  { transform: translate(-50%, -50%) scale(2);   opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(2);   opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────
+   Destination marker — dark teardrop pin
+───────────────────────────────────────────── */
+
+.destination-marker {
+  cursor: pointer;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+  transition: transform 0.2s ease;
+}
+
+.destination-marker:hover {
+  transform: scale(1.12) translateY(-2px);
+}
+
+/* ─────────────────────────────────────────────
+   Custom scrollbar
+───────────────────────────────────────────── */
+
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-white/20 rounded-full;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  @apply bg-white/40;
+  background: rgba(255, 255, 255, 0.3);
 }
+
+/* ─────────────────────────────────────────────
+   Utility — subtle border opacity class
+   (bg-white/8 etc not in default Tailwind)
+───────────────────────────────────────────── */
+
+.bg-white\/3  { background-color: rgba(255,255,255,0.03); }
+.bg-white\/8  { background-color: rgba(255,255,255,0.08); }
+.border-white\/8 { border-color: rgba(255,255,255,0.08); }
