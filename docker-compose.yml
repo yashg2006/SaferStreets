@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL + PostGIS database
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: saferstreets-postgres
+    environment:
+      POSTGRES_USER: saferstreets
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: saferstreets
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saferstreets -d saferstreets"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - saferstreets-net
+
+  # Redis for caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: saferstreets-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - saferstreets-net
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: saferstreets-api
+    environment:
+      DATABASE_URL: postgresql://saferstreets:password@postgres:5432/saferstreets
+      REDIS_URL: redis://redis:6379
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - saferstreets-net
+
+  # Valhalla Routing Service (optional for MVP, phase 2)
+  # valhalla:
+  #   image: gis-ops/valhalla:latest
+  #   container_name: saferstreets-valhalla
+  #   environment:
+  #     - VALHALLA_TILE_URL=file:///data/valhalla_tiles
+  #   ports:
+  #     - "8002:8002"
+  #   volumes:
+  #     - ./services/routing/valhalla_tiles:/data/valhalla_tiles
+  #     - ./services/routing/valhalla.json:/etc/valhalla/valhalla.json
+  #   networks:
+  #     - saferstreets-net
+
+networks:
+  saferstreets-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
