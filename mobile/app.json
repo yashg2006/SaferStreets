@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "SaferStreets",
+    "slug": "safer-streets",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.saferstreets.india",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SaferStreets needs your location to show safe routes nearby.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "SaferStreets needs your location to show safe routes nearby."
+      }
+    },
+    "android": {
+      "package": "com.saferstreets.india",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SaferStreets to access your location when using the app."
+        }
+      ]
+    ],
+    "extra": {
+      "API_BASE_URL": "https://router.project-osrm.org"
+    }
+  }
+}
