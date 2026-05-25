@@ -14,8 +14,13 @@ from database import engine, get_db
 import models
 import users
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
+# Create database tables with startup connection checks
+try:
+    models.Base.metadata.create_all(bind=engine)
+    print("[SaferStreets Database] PostgreSQL connected and tables initialized.")
+except Exception as db_init_err:
+    print(f"[SaferStreets Database Warning] PostgreSQL is offline during startup: {db_init_err}")
+    print("Backend server will launch in visual simulation/mock mode.")
 
 # Seed database with realistic crime/safety reports in Indian localities
 from database import SessionLocal
