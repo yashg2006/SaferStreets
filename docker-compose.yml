@@ -1,17 +1,33 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgis/postgis:15-3.3
+    restart: always
+    environment:
+      - POSTGRES_USER=safecity_user
+      - POSTGRES_PASSWORD=safecity_password
+      - POSTGRES_DB=safecity_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
   backend:
     build: ./backend
+    restart: always
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
     environment:
-      - DATABASE_URL=sqlite:///./safe_city.db
+      - DATABASE_URL=postgresql://safecity_user:safecity_password@db:5432/safecity_db
+    depends_on:
+      - db
 
   frontend:
     build: ./frontend
+    restart: always
     ports:
       - "5173:5173"
     volumes:
@@ -21,3 +37,6 @@ services:
       - CHOKIDAR_USEPOLLING=true
     depends_on:
       - backend
+
+volumes:
+  postgis_data:
