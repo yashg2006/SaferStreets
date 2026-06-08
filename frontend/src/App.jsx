@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet.heat';
+// Make Leaflet available globally (existing code uses window.L pattern)
+window.L = L;
 
 // LOCAL DATA & METRICS
 const LOC = [
@@ -169,9 +174,18 @@ function App() {
   const localityMarkersRef = useRef([]);
   const routeLayerRef = useRef(null);
   const routePointMarkersRef = useRef([]);
+  // Refs to avoid stale closures inside the map click handler
+  const routeModeRef = useRef(false);
+  const routePtsRef = useRef([]);
+  // Current location (Google Maps-style blue dot)
+  const locationMarkerRef = useRef(null);
+  const locationCircleRef = useRef(null);
+  const watchIdRef = useRef(null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
+  const [followLocation, setFollowLocation] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -181,6 +195,54 @@ function App() {
       setUserEmail(email);
     }
   }, []);
+
+  // Keep refs in sync with state so stable map handlers always see current values
+  useEffect(() => { routeModeRef.current = routeMode; }, [routeMode]);
+  useEffect(() => { routePtsRef.current = routePts; }, [routePts]);
+
+  // ── GPS: Watch user position like Google Maps ──
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition(
+      ({ coords }) => setUserLocation({ lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }),
+      (err) => console.warn('GPS error:', err.message),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 4000 }
+    );
+    watchIdRef.current = id;
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  // ── Update blue-dot marker whenever position changes ──
+  useEffect(() => {
+    if (!mapRef.current || !userLocation) return;
+    const { lat, lng, accuracy } = userLocation;
+
+    if (locationCircleRef.current) {
+      locationCircleRef.current.setLatLng([lat, lng]);
+      locationCircleRef.current.setRadius(accuracy);
+    } else {
+      locationCircleRef.current = window.L.circle([lat, lng], {
+        radius: accuracy, color: '#4285F4', fillColor: '#4285F4',
+        fillOpacity: 0.12, weight: 1.5, interactive: false,
+      }).addTo(mapRef.current);
+    }
+
+    if (locationMarkerRef.current) {
+      locationMarkerRef.current.setLatLng([lat, lng]);
+    } else {
+      const icon = window.L.divIcon({
+        html: `<div class="my-loc-wrap"><div class="my-loc-pulse"></div><div class="my-loc-dot"></div></div>`,
+        className: '', iconSize: [24, 24], iconAnchor: [12, 12],
+      });
+      locationMarkerRef.current = window.L.marker([lat, lng], { icon, zIndexOffset: 1000 })
+        .bindPopup('<b>📍 Your Location</b>')
+        .addTo(mapRef.current);
+    }
+
+    if (followLocation) {
+      mapRef.current.setView([lat, lng], Math.max(mapRef.current.getZoom(), 16));
+    }
+  }, [userLocation, followLocation]);
 
   const handleGoogleSuccess = async (response) => {
     try {
@@ -217,7 +279,7 @@ function App() {
 
   // 1. INITIALIZE MAP (Leaflet)
   useEffect(() => {
-    if (!window.L || mapRef.current) return;
+    if (mapRef.current) return;
 
     // Center map roughly in Mumbai coordinates as standard initial view
     const initialMap = window.L.map(mapContainerRef.current, {
@@ -239,8 +301,8 @@ function App() {
 
     // Map Event Listeners
     initialMap.on('click', (e) => {
-      // Handle Route Point Selection
-      if (routeMode) {
+      // Handle Route Point Selection — use ref to avoid stale closure
+      if (routeModeRef.current) {
         handleMapClickForRoute(e.latlng, initialMap);
         return;
       }
@@ -277,7 +339,7 @@ function App() {
         mapRef.current = null;
       }
     };
-  }, [routeMode]);
+  }, []); // Stable — uses refs for routeMode/routePts to avoid stale closures
 
   // Hook WebSocket and HTTP data fetching
   const fetchHeatmapData = async () => {
@@ -567,9 +629,25 @@ function App() {
     if (mapRef.current) updateLocalityLabelsLayer(mapRef.current);
   }, [night]);
 
+  // ── Locate Me (Google Maps-style) ──
+  const handleLocateMe = () => {
+    if (!userLocation) {
+      triggerToast('📍 Waiting for GPS signal...');
+      return;
+    }
+    if (mapRef.current) {
+      mapRef.current.flyTo([userLocation.lat, userLocation.lng], 17, { duration: 1.5, easeLinearity: 0.5 });
+      setFollowLocation(true);
+      setTimeout(() => setFollowLocation(false), 10000); // auto-stop follow after 10s
+    }
+    triggerToast('📍 Centered on your location');
+  };
+
   // 3. SECURE ROUTER CONTROLLERS
   const handleMapClickForRoute = async (latlng, mapInst) => {
-    const updatedPts = [...routePts, latlng];
+    // Read from ref (always current) to avoid stale closure bug
+    const updatedPts = [...routePtsRef.current, latlng];
+    routePtsRef.current = updatedPts; // update ref immediately
     setRoutePts(updatedPts);
 
     // Drop temporary coordinate marker
@@ -862,6 +940,17 @@ function App() {
         >
           <i className="ti ti-route" aria-hidden="true"></i>
           {routeMode ? 'Clear Route' : 'Safe Route'}
+        </button>
+
+        {/* Locate Me — Google Maps-style blue dot centering */}
+        <button
+          className={`tbtn ${followLocation ? 'route-active' : ''}`}
+          id="locateBtn"
+          onClick={handleLocateMe}
+          title={userLocation ? 'Center on my location' : 'Waiting for GPS...'}
+        >
+          <i className="ti ti-current-location" aria-hidden="true" />
+          <span>{followLocation ? 'Following' : 'Locate'}</span>
         </button>
 
         <button className="tbtn sos" onClick={() => setEmgOv(true)}>

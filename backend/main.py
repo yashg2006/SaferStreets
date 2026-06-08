@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import os
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from database import engine, get_db
 import models
@@ -186,9 +186,24 @@ async def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db
             is_superuser = False
         user = SimulatedUser()
 
-    # 4. Generate standard JWT strategy token for the session
-    strategy = get_jwt_strategy()
-    token_value = await strategy.write_token(user)
+    # 4. Generate JWT — try fastapi-users strategy, fall back to plain jose if DB is offline
+    try:
+        strategy = get_jwt_strategy()
+        token_value = await strategy.write_token(user)
+    except Exception as jwt_err:
+        print(f"[SaferStreets JWT] fastapi-users token failed ({jwt_err}), using fallback...")
+        from jose import jwt as jose_jwt
+        SECRET_KEY = os.getenv("SECRET", "saferstreets_jwt_secret_2024_india")
+        token_value = jose_jwt.encode(
+            {
+                "sub": str(user.id),
+                "email": str(user.email),
+                "aud": "fastapi-users:auth",
+                "exp": datetime.now(timezone.utc) + timedelta(days=7)
+            },
+            SECRET_KEY,
+            algorithm="HS256"
+        )
 
     return {
         "access_token": token_value,
@@ -299,47 +314,152 @@ def read_root():
     return {"message": "Welcome to SaferStreets India Backend API running with PostgreSQL/PostGIS"}
 
 @app.post("/api/route")
-def calculate_route(request: RouteRequest):
-    # Real-world mock router based on routing request coordinates
-    # We dynamically calculate standard or safe routes to bypass nearby crime reports!
+def calculate_route(request: RouteRequest, db: Session = Depends(get_db)):
+    # ── ADVANCED SAFETY-AWARE STREET ROUTER ──
+    # Fetches real road/foot paths from OSRM, scores them based on crime proximity,
+    # street lights and cctv density, and detours safely via well-lit waypoints.
     
-    start = [request.start_lng, request.start_lat]
-    end = [request.end_lng, request.end_lat]
+    start_lat, start_lng = request.start_lat, request.start_lng
+    end_lat, end_lng = request.end_lat, request.end_lng
     
-    # Add a mid-point that curves to avoid the straight line
-    mid_lat = (request.start_lat + request.end_lat) / 2
-    mid_lng = (request.start_lng + request.end_lng) / 2
+    profile = "foot"  # safety-first walking/pedestrian router
     
-    if request.safe_mode:
-        # Detour around the direct line to represent safe pathing
+    def get_osrm_path(coords_list):
+        coords_str = ";".join([f"{lng},{lat}" for lat, lng in coords_list])
+        url = f"http://router.project-osrm.org/route/v1/{profile}/{coords_str}?overview=full&geometries=geojson"
+        try:
+            r = requests.get(url, timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("code") == "Ok" and len(data.get("routes", [])) > 0:
+                    route = data["routes"][0]
+                    return {
+                        "coordinates": route["geometry"]["coordinates"],  # [[lng, lat], ...]
+                        "duration": route["duration"],  # seconds
+                        "distance": route["distance"]  # meters
+                    }
+        except Exception as e:
+            print(f"[SaferStreets OSRM] Router fetch failed: {e}")
+        return None
+
+    # Fetch standard direct street route
+    direct_route = get_osrm_path([[start_lat, start_lng], [end_lat, end_lng]])
+    
+    if not direct_route:
+        # Fallback to curved mockup route if OSRM is unreachable
+        mid_lat = (start_lat + end_lat) / 2
+        mid_lng = (start_lng + end_lng) / 2
         detour_lat = mid_lat - 0.003
         detour_lng = mid_lng + 0.003
-        route_coordinates = [
-            start,
-            [detour_lng, detour_lat],
-            end
-        ]
+        
+        fallback_coords = (
+            [[start_lng, start_lat], [detour_lng, detour_lat], [end_lng, end_lat]]
+            if request.safe_mode
+            else [[start_lng, start_lat], [mid_lng, mid_lat], [end_lng, end_lat]]
+        )
         return {
             "status": "success",
-            "type": "safest",
-            "eta_mins": round(15 + abs(request.start_lat - request.end_lat) * 200 + 4),
-            "risk_level": "Low",
-            "route_coordinates": route_coordinates
+            "type": "safest" if request.safe_mode else "fastest",
+            "eta_mins": max(2, round(15 + abs(start_lat - end_lat) * 200)),
+            "risk_level": "Medium (Fallback Router)",
+            "route_coordinates": fallback_coords
         }
-    else:
-        # Direct line path
-        route_coordinates = [
-            start,
-            [mid_lng, mid_lat],
-            end
-        ]
-        return {
-            "status": "success",
-            "type": "fastest",
-            "eta_mins": max(2, round(15 + abs(request.start_lat - request.end_lat) * 200)),
-            "risk_level": "Medium",
-            "route_coordinates": route_coordinates
-        }
+
+    # Fetch database reports/crime incidents to compute safety score of route coordinates
+    try:
+        reports = db.query(models.Report).all()
+    except Exception:
+        reports = []
+
+    # Score any coordinate point for safety based on crime incidents, lights & cctv
+    def get_coordinate_safety(lat, lng):
+        penalty = 0
+        # Check nearby incidents (within ~200 meters)
+        for r in reports:
+            dist = math.hypot(r.lat - lat, r.lng - lng)
+            if dist < 0.0018:  # approx 180 meters
+                penalty += (r.risk_score or 1.0) * 35  # Apply solid weight to crime areas
+
+        # Find nearest locality from LOC_SEED to evaluate lights & cctv
+        nearest_loc = None
+        min_dist = float('inf')
+        for loc in LOC_SEED:
+            dist = math.hypot(loc["lat"] - lat, loc["lng"] - lng)
+            if dist < min_dist:
+                min_dist = dist
+                nearest_loc = loc
+
+        safety_score = 100 - penalty
+        if nearest_loc and min_dist < 0.015:  # within 1.5km
+            # Lights and CCTV density boost the safety rating
+            lights_val = 100 - min(60, nearest_loc["crime"] * 0.2)
+            safety_score += (lights_val - 50) * 0.15 + (nearest_loc.get("cctv", 2.0) * 0.8)
+            
+        return max(0.0, min(100.0, safety_score))
+
+    # Evaluate safety for the entire OSRM path
+    def score_path(coords):
+        if not coords:
+            return 50.0
+        # Sample points along the route to keep scoring extremely fast
+        sample_rate = max(1, len(coords) // 15)
+        sampled = coords[::sample_rate]
+        scores = [get_coordinate_safety(pt[1], pt[0]) for pt in sampled]
+        return sum(scores) / len(scores) if scores else 50.0
+
+    direct_score = score_path(direct_route["coordinates"])
+
+    # If Safe Mode is requested, let's seek a detour via a safe midpoint waypoint
+    if request.safe_mode:
+        mid_lat = (start_lat + end_lat) / 2
+        mid_lng = (start_lng + end_lng) / 2
+        
+        # Find the safest nearby locality to act as a routing waypoint
+        best_waypoint = None
+        best_safety_factor = -1
+        
+        for loc in LOC_SEED:
+            dist_to_mid = math.hypot(loc["lat"] - mid_lat, loc["lng"] - mid_lng)
+            # Find safe localities within 2.5km of the midpoint
+            if dist_to_mid < 0.025:
+                # Lower crime index is safer
+                safety_factor = 500 - loc["crime"]
+                if safety_factor > best_safety_factor:
+                    best_safety_factor = safety_factor
+                    best_waypoint = loc
+                    
+        if best_waypoint:
+            # Query OSRM to construct a route via the safe waypoint
+            safe_route = get_osrm_path([
+                [start_lat, start_lng],
+                [best_waypoint["lat"], best_waypoint["lng"]],
+                [end_lat, end_lng]
+            ])
+            
+            if safe_route:
+                safe_score = score_path(safe_route["coordinates"])
+                
+                # Check if safety is indeed higher, or if we force detour
+                if safe_score >= direct_score - 10:
+                    risk_level = "Low" if safe_score >= 70 else "Medium" if safe_score >= 45 else "High"
+                    return {
+                        "status": "success",
+                        "type": "safest",
+                        "eta_mins": max(2, round(safe_route["duration"] / 60)),
+                        "risk_level": f"{risk_level} ({round(safe_score)}/100 Safety)",
+                        "route_coordinates": safe_route["coordinates"]
+                    }
+
+    # Default to direct fastest route
+    risk_level = "Low" if direct_score >= 70 else "Medium" if direct_score >= 45 else "High"
+    return {
+        "status": "success",
+        "type": "fastest",
+        "eta_mins": max(1, round(direct_route["duration"] / 60)),
+        "risk_level": f"{risk_level} ({round(direct_score)}/100 Safety)",
+        "route_coordinates": direct_route["coordinates"]
+    }
+
 
 @app.get("/api/safety-heatmap")
 def get_safety_heatmap(db: Session = Depends(get_db)):
